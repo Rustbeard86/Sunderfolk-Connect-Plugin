@@ -1,0 +1,195 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>SunderFolkConnectPlugin</AssemblyName>
+    <Product>Sunderfolk Logger:</Product>
+    <Version>1.0.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+    <RootNamespace>SunderFolkLoggingTools</RootNamespace>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Il2CppMicrosoft.CSharp">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppMicrosoft.CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppMicrosoft.Extensions.DependencyInjection.Abstractions">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppMicrosoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppMicrosoft.NET.StringTools">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppMicrosoft.NET.StringTools.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppMono.Security">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppMono.Security.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2Cppmscorlib">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2Cppmscorlib.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Configuration">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Configuration.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Core">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Core.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Data">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Data.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Diagnostics.DiagnosticSource">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Diagnostics.DiagnosticSource.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Drawing">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Drawing.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.IO.Compression">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.IO.Compression.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.IO.Compression.FileSystem">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.IO.Compression.FileSystem.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Management">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Management.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Net.Http">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Net.Http.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Numerics">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Numerics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Runtime.CompilerServices.Unsafe">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Runtime.Serialization">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Runtime.Serialization.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Xml">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Xml.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem.Xml.Linq">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Xml.Linq.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MessagePack">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\MessagePack.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MessagePack.Annotations">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\MessagePack.Annotations.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Attributes.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Attributes.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Blackrazor.Editor.Tools.EncounterDesigner.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Blackrazor.Editor.Tools.EncounterDesigner.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Blackrazor.Runtime.MainScreen">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Blackrazor.Runtime.MainScreen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Blackrazor.Runtime.PersonalScreen">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Blackrazor.Runtime.PersonalScreen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Blackrazor.Runtime.Shared">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Blackrazor.Runtime.Shared.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.CrashReporting.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.CrashReporting.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.DataBinding.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.DataBinding.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.DataBinding.Samples.BasicDataBindingSample.Scripts">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.DataBinding.Samples.BasicDataBindingSample.Scripts.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.DataBinding.Samples.ConfigurableBindingsSample.Scripts">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.DataBinding.Samples.ConfigurableBindingsSample.Scripts.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.DataBinding.Samples.WidgetOrderingSample.Scripts">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.DataBinding.Samples.WidgetOrderingSample.Scripts.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Hardware.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Hardware.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Localization.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Localization.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.Platform.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Platform.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.UnityAccelbyteSDK.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.UnityAccelbyteSDK.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.UnityCSharpExtensions.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.UnityCSharpExtensions.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.UnityExtensions.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.UnityExtensions.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.UnityLogging.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.UnityLogging.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.UnityNetworking.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.UnityNetworking.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.SecretDoor.UnityPersistence.Runtime">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.UnityPersistence.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="zxing.unity">
+      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\zxing.unity.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
