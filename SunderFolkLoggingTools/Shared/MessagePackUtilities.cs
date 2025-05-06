@@ -1,4 +1,5 @@
 ﻿using System;
+using SunderFolkLoggingTools.Bridges;
 
 namespace SunderFolkLoggingTools.Shared;
 
@@ -18,96 +19,30 @@ internal static class MessagePackUtilities
     /// <returns>Modified Base64 string with the replaced IP address, or the original string if no replacement was made</returns>
     internal static string ReplaceIPInMessagePack(string base64String, string newIP)
     {
-        LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", true);
-        LoggingHelper.LogBase64Operation("Processing Base64 Input", base64String, true);
-
-        try
+        return LoggingHelper.LogOperation("ReplaceIPInMessagePack", () =>
         {
-            // Normalize the Base64 string (web-safe to standard)
-            var normalizedBase64 = base64String.Replace('-', '+').Replace('_', '/');
-
-            // Add padding if needed to make it a valid Base64 string
-            var mod4 = normalizedBase64.Length % 4;
-            if (mod4 > 0)
+            try
             {
-                var padding = new string('=', 4 - mod4);
-                normalizedBase64 += padding;
+                // Use the bridge which uses MessagePackDebugTool
+                var result = MessagePackBridge.ProcessJoinParameter(base64String, newIP);
 
-                if (PluginConfig.DevMode.Value)
-                    Plugin.Log.LogInfo($"Added {4 - mod4} padding characters to Base64 string");
+                if (!result.Success)
+                {
+                    LoggingHelper.Logger.Warning($"MessagePack processing failed: {result.ErrorMessage}");
+                    return base64String;
+                }
+
+                if (result.DidReplaceIP)
+                    LoggingHelper.Logger.Info($"Replaced IP address with: {newIP}");
+
+                return result.ModifiedBase64;
             }
-
-            // Convert to byte array
-            var data = Convert.FromBase64String(normalizedBase64);
-            LoggingHelper.LogDataProcessing("Decoded Base64 to bytes", data, $"Length: {data.Length} bytes");
-
-            // Common private IP address patterns in hex representation:
-            // 192.168.x.x = C0 A8 xx xx
-            // 10.x.x.x = 0A xx xx xx
-            // 172.16-31.x.x = AC 1x xx xx
-
-            var ipReplaced = false;
-            for (var i = 0; i < data.Length - 4; i++)
-                // Check for 192.168.x.x pattern (most common for home networks)
-                if (data[i] == 0xC0 && data[i + 1] == 0xA8)
-                {
-                    if (PluginConfig.DevMode.Value)
-                        Plugin.Log.LogInfo(
-                            $"Found potential local IP at position {i}: 192.168.{data[i + 2]}.{data[i + 3]}");
-
-                    if (ReplaceIPBytes(data, i, newIP))
-                    {
-                        ipReplaced = true;
-                        break;
-                    }
-                }
-                // Check for 10.x.x.x pattern
-                else if (data[i] == 0x0A)
-                {
-                    if (PluginConfig.DevMode.Value)
-                        Plugin.Log.LogInfo(
-                            $"Found potential local IP at position {i}: 10.{data[i + 1]}.{data[i + 2]}.{data[i + 3]}");
-
-                    if (ReplaceIPBytes(data, i, newIP))
-                    {
-                        ipReplaced = true;
-                        break;
-                    }
-                }
-                // Check for 172.16-31.x.x pattern
-                else if (data[i] == 0xAC && data[i + 1] >= 0x10 && data[i + 1] <= 0x1F)
-                {
-                    if (PluginConfig.DevMode.Value)
-                        Plugin.Log.LogInfo(
-                            $"Found potential local IP at position {i}: 172.{data[i + 1]}.{data[i + 2]}.{data[i + 3]}");
-
-                    if (ReplaceIPBytes(data, i, newIP))
-                    {
-                        ipReplaced = true;
-                        break;
-                    }
-                }
-
-            if (ipReplaced)
+            catch (Exception ex)
             {
-                var result = ConvertToWebSafeBase64(data);
-                LoggingHelper.LogBase64Operation("Modified Base64 Result", result, true);
-                LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", false);
-                return result;
+                LoggingHelper.LogException("ReplaceIPInMessagePack", ex);
+                return base64String;
             }
-
-            if (PluginConfig.DevMode.Value)
-                Plugin.Log.LogWarning("Could not locate IP address pattern in MessagePack data");
-
-            LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", false);
-            return base64String;
-        }
-        catch (Exception ex)
-        {
-            LoggingHelper.LogException("ReplaceIPInMessagePack", ex);
-            LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", false);
-            return base64String;
-        }
+        });
     }
 
     /// <summary>
@@ -162,9 +97,7 @@ internal static class MessagePackUtilities
             data[position + 2] = octet3;
             data[position + 3] = octet4;
 
-            if (PluginConfig.DevMode.Value)
-                Plugin.Log.LogInfo($"Replaced IP with: {newIP}");
-
+            LoggingHelper.Logger.Info($"Replaced IP with: {newIP}");
             return true;
         }
 
@@ -184,18 +117,14 @@ internal static class MessagePackUtilities
             // Then convert to web-safe Base64 and remove any padding
             var webSafeBase64 = standardBase64.Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
-            if (PluginConfig.DevMode.Value)
-            {
-                Plugin.Log.LogInfo($"Standard Base64 (pre-conversion): {standardBase64}");
-                Plugin.Log.LogInfo($"Web-safe Base64 (post-conversion): {webSafeBase64}");
-            }
+            LoggingHelper.Logger.Verbose($"Standard Base64: {standardBase64}");
+            LoggingHelper.Logger.Verbose($"Web-safe Base64: {webSafeBase64}");
 
             return webSafeBase64;
         }
         catch (Exception ex)
         {
-            if (PluginConfig.DevMode.Value)
-                Plugin.Log.LogError($"Failed to convert to web-safe Base64: {ex.Message}");
+            LoggingHelper.Logger.Error($"Failed to convert to web-safe Base64: {ex.Message}");
 
             // Return empty string on failure to prevent further processing
             return string.Empty;

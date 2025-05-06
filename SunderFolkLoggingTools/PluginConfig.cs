@@ -24,6 +24,16 @@ internal static class PluginConfig
     public static ConfigEntry<bool> EnableQrImageGeneration;
 
     /// <summary>
+    ///     Controls the amount of detail in logs. Basic info if disabled, more details if enabled.
+    /// </summary>
+    public static ConfigEntry<bool> VerboseLogging;
+
+    /// <summary>
+    ///     Enables lowest level debug information including raw data dumps.
+    /// </summary>
+    public static ConfigEntry<bool> DebugLogging;
+
+    /// <summary>
     ///     Initializes all configuration entries from the BepInEx configuration system.
     ///     Should be called once during plugin startup.
     /// </summary>
@@ -42,6 +52,20 @@ internal static class PluginConfig
             "GenerateQrImage",
             false,
             "Generate and open QR PNG files for connection URLs. Useful for sharing connections with mobile devices."
+        );
+
+        VerboseLogging = config.Bind(
+            "Logging",
+            "Verbose",
+            false,
+            "Enable detailed logging of operations. Requires DevMode enabled."
+        );
+
+        DebugLogging = config.Bind(
+            "Logging",
+            "Debug",
+            false,
+            "Enable raw data inspection and byte-level logging. Requires DevMode enabled."
         );
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text.RegularExpressions;
 using Blackrazor.Runtime.Shared.Networking;
 using HarmonyLib;
 using SunderFolkLoggingTools.Shared;
@@ -26,110 +25,67 @@ internal static class QRConnectHelperPatch
     /// <returns>True to continue with the original method execution, false to skip it</returns>
     public static bool Prefix(string val, ref string __result)
     {
-        LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", true);
-        LoggingHelper.LogBase64Operation("Input Base64 String", val, true);
-
-        try
+        // We'll use a tuple to return both whether to continue original method and the possibly modified result
+        var opResult = LoggingHelper.LogOperation("QRConnectHelper.ToWebSafeBase64", () =>
         {
-            // Normalize the Base64 string (web-safe to standard) and handle padding
-            var normalizedBase64 = val.Replace('-', '+').Replace('_', '/');
+            // Log the original input for debugging purposes
+            LoggingHelper.Logger.Info("Processing connection data");
 
-            // Add padding if needed to make it a valid Base64 string
-            var mod4 = normalizedBase64.Length % 4;
-            if (mod4 > 0)
-            {
-                var padding = new string('=', 4 - mod4);
-                normalizedBase64 += padding;
+            // Process the base64 data for debugging
+            if (PluginConfig.DevMode.Value) LoggingHelper.ProcessBase64("Input Base64 String", val);
 
-                if (PluginConfig.DevMode.Value)
-                    Plugin.Log.LogInfo($"Added {4 - mod4} padding characters to Base64 string");
-            }
-
-            // Try to decode the Base64 string
-            byte[] decoded;
             try
             {
-                decoded = Convert.FromBase64String(normalizedBase64);
-                LoggingHelper.LogDataProcessing("Decoded Base64", decoded);
+                // Get the external IP address for replacing the local one
+                var externalIP = QrUtilities.GetExternalIpAddress();
+                if (string.IsNullOrEmpty(externalIP))
+                {
+                    LoggingHelper.Logger.Warning("Failed to get external IP address");
+                    return (true, null); // Return tuple: (continueOriginal, result)
+                }
+
+                // Replace the IP in the MessagePack data
+                var modifiedBase64 = MessagePackUtilities.ReplaceIPInMessagePack(val, externalIP);
+
+                // Set the result to our modified value if successful
+                if (!string.IsNullOrEmpty(modifiedBase64))
+                {
+                    LoggingHelper.Logger.Info($"Modified Base64 with external IP: {externalIP}");
+
+                    // Try to determine the port to include it in the log
+                    try
+                    {
+                        var decoded = Convert.FromBase64String(
+                            modifiedBase64.Replace('-', '+').Replace('_', '/') +
+                            new string('=', (4 - modifiedBase64.Length % 4) % 4)
+                        );
+
+                        var port = MessagePackUtilities.ExtractPortFromMessagePack(decoded);
+                        if (port > 0) LoggingHelper.Logger.Info($"IP Address for connections {externalIP}:{port}");
+                    }
+                    catch
+                    {
+                        // Ignore errors in port detection
+                    }
+
+                    // Optionally generate a QR code image for the connection
+                    if (PluginConfig.EnableQrImageGeneration.Value)
+                        QrUtilities.GenerateAndOpenQr($"https://play.sunderfolk.com/?join={modifiedBase64}&p=2");
+
+                    return (false, modifiedBase64); // Return tuple: (continueOriginal, result)
+                }
             }
             catch (Exception ex)
             {
-                if (PluginConfig.DevMode.Value)
-                {
-                    Plugin.Log.LogError($"Failed to decode Base64 string: {ex.Message}");
-                    // Try to identify problematic characters
-                    var invalidChars = Regex.Replace(normalizedBase64, @"[A-Za-z0-9\+/=]", "");
-                    if (invalidChars.Length > 0)
-                        Plugin.Log.LogError($"Found invalid Base64 characters: '{invalidChars}'");
-                }
-
-                // Continue with the original method as fallback
-                LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", false);
-                return true;
+                LoggingHelper.LogException("QRConnectHelper.ToWebSafeBase64", ex);
             }
 
-            // In development mode, log the first few bytes for debugging
-            if (decoded.Length > 0 && PluginConfig.DevMode.Value)
-            {
-                var hex = BitConverter.ToString(decoded, 0, Math.Min(32, decoded.Length)).Replace("-", " ");
-                Plugin.Log.LogInfo($"First bytes (hex): {hex}...");
-            }
+            // If we get here, continue with the original method
+            return (true, (string)null);
+        });
 
-            // Get the external IP address
-            var externalIP = QrUtilities.GetExternalIpAddress();
-            if (!string.IsNullOrEmpty(externalIP))
-            {
-                // Try to replace the local IP with the external IP
-                var modifiedBase64 = MessagePackUtilities.ReplaceIPInMessagePack(val, externalIP);
-
-                // If we successfully modified the Base64 string and got a valid result
-                if (!string.IsNullOrEmpty(modifiedBase64) && modifiedBase64 != val)
-                {
-                    // Extract the port number from the decoded data
-                    var port = MessagePackUtilities.ExtractPortFromMessagePack(decoded);
-
-                    // Log the modified data in development mode
-                    if (PluginConfig.DevMode.Value)
-                    {
-                        Plugin.Log.LogInfo($"Modified Base64 with external IP: {externalIP}");
-                        Plugin.Log.LogInfo($"IP Address for connections {externalIP}:{port}");
-                    }
-
-                    // Create a connection URI with the modified data
-                    var uri = $"https://play.sunderfolk.com/?join={modifiedBase64}&p=2";
-
-                    if (PluginConfig.DevMode.Value)
-                        Plugin.Log.LogInfo("============================================");
-
-                    // Generate and open the QR code if enabled
-                    QrUtilities.GenerateAndOpenQr(uri);
-                    LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", false);
-                    return true;
-                }
-            }
-
-            // If we couldn't modify the Base64 string, use the original value
-            var originalUri = $"https://play.sunderfolk.com/?join={val}&p=2";
-
-            if (PluginConfig.DevMode.Value)
-            {
-                Plugin.Log.LogInfo($"Generated URI for QR code (unmodified): {originalUri}");
-                Plugin.Log.LogInfo("============================================");
-            }
-
-            // Generate and open the QR code with the original data
-            QrUtilities.GenerateAndOpenQr(originalUri);
-        }
-        catch (Exception ex)
-        {
-            LoggingHelper.LogException("QRConnectHelper.ToWebSafeBase64", ex);
-
-            // Try to generate a QR code with the original data as a fallback
-            QrUtilities.GenerateAndOpenQr($"https://play.sunderfolk.com/?join={val}&p=2");
-        }
-
-        LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", false);
-        // Continue with the original method
-        return true;
+        // Now handle the result tuple outside the lambda
+        if (opResult.Item1 == false && opResult.Item2 != null) __result = opResult.Item2; // Set the ref parameter
+        return opResult.Item1; // Return continuation flag
     }
 }

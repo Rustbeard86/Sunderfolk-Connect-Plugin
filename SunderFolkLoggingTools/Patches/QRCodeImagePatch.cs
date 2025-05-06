@@ -26,83 +26,78 @@ internal static class QRCodeImagePatch
     /// <returns>True to continue with the original method execution, false to skip it</returns>
     public static bool Prefix(QRCodeImage __instance, ref string value)
     {
-        LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", true);
+        // Store the value in a local variable so we can access it in the lambda
+        var localValue = value;
 
-        // Log the intercepted QR code value when in development mode
-        if (PluginConfig.DevMode.Value)
+        // Use logging operation without accessing the ref parameter directly
+        var result = LoggingHelper.LogOperation("QRCodeImage.SetValue", () =>
         {
-            Plugin.Log.LogInfo("[QRCodeImage.SetValue] Intercepted QR input:");
-            Plugin.Log.LogInfo($"Original value: {value}");
-        }
+            // Log the intercepted QR code value
+            LoggingHelper.Logger.Info($"QR input: {localValue}");
 
-        // Skip processing if the value is empty
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            if (PluginConfig.DevMode.Value)
-                Plugin.Log.LogWarning("SetValue called with empty string. Skipping patch.");
-
-            LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
-            return true;
-        }
-
-        try
-        {
-            // Parse the URL and extract query parameters
-            var uri = new Uri(value);
-            var query = HttpUtility.ParseQueryString(uri.Query);
-            var joinParam = query.Get("join");
-
-            // Skip if there's no join parameter (unexpected format)
-            if (string.IsNullOrWhiteSpace(joinParam))
+            // Skip processing if the value is empty
+            if (string.IsNullOrWhiteSpace(localValue))
             {
-                if (PluginConfig.DevMode.Value)
-                    Plugin.Log.LogWarning("No 'join' parameter found in URL query string");
-
-                LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
-                return true;
+                LoggingHelper.Logger.Warning("Empty URL, skipping patch");
+                return (true, localValue); // Return tuple with result and unchanged value
             }
 
-            LoggingHelper.LogBase64Operation("Join parameter from URL", joinParam, true);
-
-            // Get the external IP address for replacing the local one
-            var externalIP = QrUtilities.GetExternalIpAddress();
-            if (string.IsNullOrEmpty(externalIP))
+            try
             {
-                if (PluginConfig.DevMode.Value)
-                    Plugin.Log.LogWarning("Failed to get external IP address. Using original URL.");
+                // Parse the URL and extract query parameters
+                var uri = new Uri(localValue);
+                var query = HttpUtility.ParseQueryString(uri.Query);
+                var joinParam = query.Get("join");
 
-                LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
-                return true;
+                // Skip if there's no join parameter (unexpected format)
+                if (string.IsNullOrWhiteSpace(joinParam))
+                {
+                    LoggingHelper.Logger.Warning("No 'join' parameter in URL");
+                    return (true, localValue); // Return tuple with result and unchanged value
+                }
+
+                // Process the join parameter
+                LoggingHelper.Logger.BeginGroup("Join Parameter Analysis");
+                var decoded = LoggingHelper.ProcessBase64("Join", joinParam, true);
+                if (decoded != null)
+                    LoggingHelper.LogMessagePackData(joinParam);
+                LoggingHelper.Logger.EndGroup();
+
+                // Get the external IP address for replacing the local one
+                var externalIP = QrUtilities.GetExternalIpAddress();
+                if (string.IsNullOrEmpty(externalIP))
+                {
+                    LoggingHelper.Logger.Warning("Failed to get external IP address");
+                    return (true, localValue); // Return tuple with result and unchanged value
+                }
+
+                // Replace the IP in the MessagePack data and construct a new URL
+                LoggingHelper.Logger.BeginGroup("IP Replacement");
+                var modifiedBase64 = MessagePackUtilities.ReplaceIPInMessagePack(joinParam, externalIP);
+                LoggingHelper.Logger.EndGroup();
+
+                // Verify we got a valid result back
+                if (string.IsNullOrEmpty(modifiedBase64))
+                {
+                    LoggingHelper.Logger.Warning("IP replacement failed");
+                    return (true, localValue); // Return tuple with result and unchanged value
+                }
+
+                var patchedUrl = $"https://play.sunderfolk.com/?join={modifiedBase64}&p=2";
+                LoggingHelper.Logger.Result("Modified URL", patchedUrl);
+
+                return (true, patchedUrl); // Return tuple with result and modified value
             }
-
-            // Replace the IP in the MessagePack data and construct a new URL
-            var modifiedBase64 = MessagePackUtilities.ReplaceIPInMessagePack(joinParam, externalIP);
-
-            // Verify we got a valid result back
-            if (string.IsNullOrEmpty(modifiedBase64))
+            catch (Exception ex)
             {
-                if (PluginConfig.DevMode.Value)
-                    Plugin.Log.LogWarning("IP replacement returned empty string. Using original URL.");
-
-                LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
-                return true;
+                LoggingHelper.LogException("QRCodeImage.SetValue", ex);
+                return (true, localValue); // Return tuple with result and unchanged value
             }
+        });
 
-            var patchedUrl = $"https://play.sunderfolk.com/?join={modifiedBase64}&p=2";
-
-            // Update the value and log the change
-            if (PluginConfig.DevMode.Value)
-                Plugin.Log.LogInfo($"Overriding QR URL with patched IP: {patchedUrl}");
-
-            value = patchedUrl;
-        }
-        catch (Exception ex)
-        {
-            LoggingHelper.LogException("QRCodeImage.SetValue", ex);
-        }
-
-        LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
-        // Continue with the original method execution
-        return true;
+        // Now assign the result back to the ref parameter
+        if (result.Item2 != localValue) // Only assign if changed
+            value = result.Item2;
+        return result.Item1; // Return whether to continue with original method
     }
 }

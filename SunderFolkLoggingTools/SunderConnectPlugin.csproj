@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -19,6 +19,7 @@
   <ItemGroup>
     <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="MessagePack" Version="3.1.3" PrivateAssets="none" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 
@@ -103,14 +104,6 @@
       <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Il2CppSystem.Xml.Linq.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="MessagePack">
-      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\MessagePack.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="MessagePack.Annotations">
-      <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\MessagePack.Annotations.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.SecretDoor.Attributes.Runtime">
       <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\Unity.SecretDoor.Attributes.Runtime.dll</HintPath>
       <Private>False</Private>
@@ -191,5 +184,9 @@
       <HintPath>D:\High Seas\Sunderfolk\BepInEx\interop\zxing.unity.dll</HintPath>
       <Private>False</Private>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Bridges\" />
   </ItemGroup>
 </Project>
