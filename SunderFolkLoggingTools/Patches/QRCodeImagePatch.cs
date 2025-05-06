@@ -26,6 +26,8 @@ internal static class QRCodeImagePatch
     /// <returns>True to continue with the original method execution, false to skip it</returns>
     public static bool Prefix(QRCodeImage __instance, ref string value)
     {
+        LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", true);
+
         // Log the intercepted QR code value when in development mode
         if (PluginConfig.DevMode.Value)
         {
@@ -38,6 +40,8 @@ internal static class QRCodeImagePatch
         {
             if (PluginConfig.DevMode.Value)
                 Plugin.Log.LogWarning("SetValue called with empty string. Skipping patch.");
+
+            LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
             return true;
         }
 
@@ -50,26 +54,54 @@ internal static class QRCodeImagePatch
 
             // Skip if there's no join parameter (unexpected format)
             if (string.IsNullOrWhiteSpace(joinParam))
+            {
+                if (PluginConfig.DevMode.Value)
+                    Plugin.Log.LogWarning("No 'join' parameter found in URL query string");
+
+                LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
                 return true;
+            }
+
+            LoggingHelper.LogBase64Operation("Join parameter from URL", joinParam, true);
 
             // Get the external IP address for replacing the local one
             var externalIP = QrUtilities.GetExternalIpAddress();
             if (string.IsNullOrEmpty(externalIP))
+            {
+                if (PluginConfig.DevMode.Value)
+                    Plugin.Log.LogWarning("Failed to get external IP address. Using original URL.");
+
+                LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
                 return true;
+            }
 
             // Replace the IP in the MessagePack data and construct a new URL
             var modifiedBase64 = MessagePackUtilities.ReplaceIPInMessagePack(joinParam, externalIP);
+
+            // Verify we got a valid result back
+            if (string.IsNullOrEmpty(modifiedBase64))
+            {
+                if (PluginConfig.DevMode.Value)
+                    Plugin.Log.LogWarning("IP replacement returned empty string. Using original URL.");
+
+                LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
+                return true;
+            }
+
             var patchedUrl = $"https://play.sunderfolk.com/?join={modifiedBase64}&p=2";
 
             // Update the value and log the change
-            Plugin.Log.LogInfo($"Overriding QR URL with patched IP: {patchedUrl}");
+            if (PluginConfig.DevMode.Value)
+                Plugin.Log.LogInfo($"Overriding QR URL with patched IP: {patchedUrl}");
+
             value = patchedUrl;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogError($"SetValue patch failed: {ex.Message}");
+            LoggingHelper.LogException("QRCodeImage.SetValue", ex);
         }
 
+        LoggingHelper.LogOperationBoundary("QRCodeImage.SetValue", false);
         // Continue with the original method execution
         return true;
     }

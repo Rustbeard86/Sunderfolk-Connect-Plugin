@@ -18,16 +18,35 @@ internal static class MessagePackUtilities
     /// <returns>Modified Base64 string with the replaced IP address, or the original string if no replacement was made</returns>
     internal static string ReplaceIPInMessagePack(string base64String, string newIP)
     {
+        LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", true);
+        LoggingHelper.LogBase64Operation("Processing Base64 Input", base64String, true);
+
         try
         {
-            // Convert web-safe Base64 to standard Base64, then to byte array
-            var data = Convert.FromBase64String(base64String.Replace('-', '+').Replace('_', '/'));
+            // Normalize the Base64 string (web-safe to standard)
+            var normalizedBase64 = base64String.Replace('-', '+').Replace('_', '/');
+
+            // Add padding if needed to make it a valid Base64 string
+            var mod4 = normalizedBase64.Length % 4;
+            if (mod4 > 0)
+            {
+                var padding = new string('=', 4 - mod4);
+                normalizedBase64 += padding;
+
+                if (PluginConfig.DevMode.Value)
+                    Plugin.Log.LogInfo($"Added {4 - mod4} padding characters to Base64 string");
+            }
+
+            // Convert to byte array
+            var data = Convert.FromBase64String(normalizedBase64);
+            LoggingHelper.LogDataProcessing("Decoded Base64 to bytes", data, $"Length: {data.Length} bytes");
 
             // Common private IP address patterns in hex representation:
             // 192.168.x.x = C0 A8 xx xx
             // 10.x.x.x = 0A xx xx xx
             // 172.16-31.x.x = AC 1x xx xx
 
+            var ipReplaced = false;
             for (var i = 0; i < data.Length - 4; i++)
                 // Check for 192.168.x.x pattern (most common for home networks)
                 if (data[i] == 0xC0 && data[i + 1] == 0xA8)
@@ -37,7 +56,10 @@ internal static class MessagePackUtilities
                             $"Found potential local IP at position {i}: 192.168.{data[i + 2]}.{data[i + 3]}");
 
                     if (ReplaceIPBytes(data, i, newIP))
-                        return ConvertToWebSafeBase64(data);
+                    {
+                        ipReplaced = true;
+                        break;
+                    }
                 }
                 // Check for 10.x.x.x pattern
                 else if (data[i] == 0x0A)
@@ -47,7 +69,10 @@ internal static class MessagePackUtilities
                             $"Found potential local IP at position {i}: 10.{data[i + 1]}.{data[i + 2]}.{data[i + 3]}");
 
                     if (ReplaceIPBytes(data, i, newIP))
-                        return ConvertToWebSafeBase64(data);
+                    {
+                        ipReplaced = true;
+                        break;
+                    }
                 }
                 // Check for 172.16-31.x.x pattern
                 else if (data[i] == 0xAC && data[i + 1] >= 0x10 && data[i + 1] <= 0x1F)
@@ -57,15 +82,30 @@ internal static class MessagePackUtilities
                             $"Found potential local IP at position {i}: 172.{data[i + 1]}.{data[i + 2]}.{data[i + 3]}");
 
                     if (ReplaceIPBytes(data, i, newIP))
-                        return ConvertToWebSafeBase64(data);
+                    {
+                        ipReplaced = true;
+                        break;
+                    }
                 }
 
-            Plugin.Log.LogWarning("Could not locate IP address pattern in MessagePack data");
+            if (ipReplaced)
+            {
+                var result = ConvertToWebSafeBase64(data);
+                LoggingHelper.LogBase64Operation("Modified Base64 Result", result, true);
+                LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", false);
+                return result;
+            }
+
+            if (PluginConfig.DevMode.Value)
+                Plugin.Log.LogWarning("Could not locate IP address pattern in MessagePack data");
+
+            LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", false);
             return base64String;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogError($"Error replacing IP: {ex.Message}");
+            LoggingHelper.LogException("ReplaceIPInMessagePack", ex);
+            LoggingHelper.LogOperationBoundary("ReplaceIPInMessagePack", false);
             return base64String;
         }
     }
@@ -136,7 +176,30 @@ internal static class MessagePackUtilities
     /// </summary>
     private static string ConvertToWebSafeBase64(byte[] data)
     {
-        return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_');
+        try
+        {
+            // Convert to standard Base64 first
+            var standardBase64 = Convert.ToBase64String(data);
+
+            // Then convert to web-safe Base64 and remove any padding
+            var webSafeBase64 = standardBase64.Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+            if (PluginConfig.DevMode.Value)
+            {
+                Plugin.Log.LogInfo($"Standard Base64 (pre-conversion): {standardBase64}");
+                Plugin.Log.LogInfo($"Web-safe Base64 (post-conversion): {webSafeBase64}");
+            }
+
+            return webSafeBase64;
+        }
+        catch (Exception ex)
+        {
+            if (PluginConfig.DevMode.Value)
+                Plugin.Log.LogError($"Failed to convert to web-safe Base64: {ex.Message}");
+
+            // Return empty string on failure to prevent further processing
+            return string.Empty;
+        }
     }
 
     /// <summary>

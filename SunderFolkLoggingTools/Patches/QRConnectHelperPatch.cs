@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 using Blackrazor.Runtime.Shared.Networking;
 using HarmonyLib;
 using SunderFolkLoggingTools.Shared;
@@ -25,17 +26,47 @@ internal static class QRConnectHelperPatch
     /// <returns>True to continue with the original method execution, false to skip it</returns>
     public static bool Prefix(string val, ref string __result)
     {
-        // Log the input data when in development mode
-        if (PluginConfig.DevMode.Value)
-        {
-            Plugin.Log.LogInfo("=== QRConnectHelper.ToWebSafeBase64 Input ===");
-            Plugin.Log.LogInfo($"Base64 Input: {val}");
-        }
+        LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", true);
+        LoggingHelper.LogBase64Operation("Input Base64 String", val, true);
 
         try
         {
-            // Convert from web-safe Base64 to standard Base64, then decode to bytes
-            var decoded = Convert.FromBase64String(val.Replace('-', '+').Replace('_', '/'));
+            // Normalize the Base64 string (web-safe to standard) and handle padding
+            var normalizedBase64 = val.Replace('-', '+').Replace('_', '/');
+
+            // Add padding if needed to make it a valid Base64 string
+            var mod4 = normalizedBase64.Length % 4;
+            if (mod4 > 0)
+            {
+                var padding = new string('=', 4 - mod4);
+                normalizedBase64 += padding;
+
+                if (PluginConfig.DevMode.Value)
+                    Plugin.Log.LogInfo($"Added {4 - mod4} padding characters to Base64 string");
+            }
+
+            // Try to decode the Base64 string
+            byte[] decoded;
+            try
+            {
+                decoded = Convert.FromBase64String(normalizedBase64);
+                LoggingHelper.LogDataProcessing("Decoded Base64", decoded);
+            }
+            catch (Exception ex)
+            {
+                if (PluginConfig.DevMode.Value)
+                {
+                    Plugin.Log.LogError($"Failed to decode Base64 string: {ex.Message}");
+                    // Try to identify problematic characters
+                    var invalidChars = Regex.Replace(normalizedBase64, @"[A-Za-z0-9\+/=]", "");
+                    if (invalidChars.Length > 0)
+                        Plugin.Log.LogError($"Found invalid Base64 characters: '{invalidChars}'");
+                }
+
+                // Continue with the original method as fallback
+                LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", false);
+                return true;
+            }
 
             // In development mode, log the first few bytes for debugging
             if (decoded.Length > 0 && PluginConfig.DevMode.Value)
@@ -51,8 +82,8 @@ internal static class QRConnectHelperPatch
                 // Try to replace the local IP with the external IP
                 var modifiedBase64 = MessagePackUtilities.ReplaceIPInMessagePack(val, externalIP);
 
-                // If we successfully modified the Base64 string
-                if (modifiedBase64 != val)
+                // If we successfully modified the Base64 string and got a valid result
+                if (!string.IsNullOrEmpty(modifiedBase64) && modifiedBase64 != val)
                 {
                     // Extract the port number from the decoded data
                     var port = MessagePackUtilities.ExtractPortFromMessagePack(decoded);
@@ -72,6 +103,7 @@ internal static class QRConnectHelperPatch
 
                     // Generate and open the QR code if enabled
                     QrUtilities.GenerateAndOpenQr(uri);
+                    LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", false);
                     return true;
                 }
             }
@@ -90,17 +122,13 @@ internal static class QRConnectHelperPatch
         }
         catch (Exception ex)
         {
-            // Log detailed error information in development mode
-            if (PluginConfig.DevMode.Value)
-            {
-                Plugin.Log.LogError($"Failed to process QR: {ex}");
-                Plugin.Log.LogError($"Type: {ex.GetType().FullName}");
-            }
+            LoggingHelper.LogException("QRConnectHelper.ToWebSafeBase64", ex);
 
             // Try to generate a QR code with the original data as a fallback
             QrUtilities.GenerateAndOpenQr($"https://play.sunderfolk.com/?join={val}&p=2");
         }
 
+        LoggingHelper.LogOperationBoundary("QRConnectHelper.ToWebSafeBase64", false);
         // Continue with the original method
         return true;
     }
